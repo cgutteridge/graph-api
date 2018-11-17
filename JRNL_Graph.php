@@ -1,8 +1,7 @@
 <?php
 
 class JRNL_Graph {
-	var $nodes = array();
-	var $links = array();
+	var $data = array( "nodes"=>array(), "links"=>array() );
 	function __construct() {
 	}
 
@@ -16,8 +15,8 @@ class JRNL_Graph {
 	}
 
 	function erase() {
-		$this->nodes = array();
-		$this->links = array();
+		$this->data["nodes"] = array();
+		$this->data["links"] = array();
 	}
 
 	function populatePosts() {
@@ -32,7 +31,7 @@ class JRNL_Graph {
 	function addPost( $post ) {
 		$post_id = "post/".$post->ID;
 		$user_id = "user/".$post->post_author;
-		$this->nodes[$post_id] = array( 
+		$this->data["nodes"][$post_id] = array( 
 		              "id" => $post_id,
 		            "type" => $post->post_type,
 		           "title" => $post->post_title,
@@ -51,7 +50,7 @@ class JRNL_Graph {
 			   "comment_count" => $post->post_comment_count,
 			),
 		);
-		$this->links[]= array( 
+		$this->data["links"][]= array( 
 			   "type" => "creator",
 			"subject" => $post_id,
 			 "object" => $user_id
@@ -69,7 +68,7 @@ class JRNL_Graph {
 
 	function addComment( $comment ) {
 		$comment_id = "comment/".$comment->comment_ID;
-		$this->nodes[$comment_id] = array( 
+		$this->data["nodes"][$comment_id] = array( 
 			              "id" => $comment_id,
 			            "type" => "comment",
 				   "title" => $this->trimLength( $comment->comment_author, 16 ).": ".$this->trimLength( strip_tags($comment->comment_content),50),
@@ -83,14 +82,14 @@ class JRNL_Graph {
 		);
 
 		$post_id = "post/".$comment->comment_post_ID;
-		$this->links[]= array( 
+		$this->data["links"][]= array( 
 			   "type" => "comments",
 			"subject" => $comment_id,
 			 "object" => $post_id
 		);
 		if( $comment->user_id ) {
 			$user_id = "user/".$comment->user_id;
-			$this->links[]= array( 
+			$this->data["links"][]= array( 
 			   	"type" => "creator",
 				"subject" => $comment_id,
 			 	"object" => $user_id
@@ -98,7 +97,7 @@ class JRNL_Graph {
 		}
 		if( $comment->comment_parent ) {
 			$parent_id = "comment/".$comment->comment_parent;
-			$this->links[]= array( 
+			$this->data["links"][]= array( 
 			   	"type" => "comments",
 				"subject" => $comment_id,
 			 	"object" => $user_id
@@ -117,7 +116,7 @@ class JRNL_Graph {
 
 	function addTerm( $term ) {
 		$term_id = "term/".$term->term_taxonomy_id;
-		$this->nodes[$term_id] = array( 
+		$this->data["nodes"][$term_id] = array( 
 		              "id" => $term_id,
 		            "type" => $term->taxonomy,
 		           "title" => $term->name,
@@ -130,7 +129,7 @@ class JRNL_Graph {
 
 		if( $term->parent ) {
 			$parent_id = "term/".$term->parent;
-			$this->links[]= array( 
+			$this->data["links"][]= array( 
 			   	"type" => "broader",
 				"subject" => $term_id, # nb. I'm muddling taxonomy term & term_id
 			 	"object" => $parent_id
@@ -150,7 +149,7 @@ class JRNL_Graph {
 	function addTermRel( $termrel ) {
 		$post_id = "post/".$termrel->object_id; # this makes me suspicious are we *sure* it's always a post? what are these links thingies?
 		$term_id = "term/".$termrel->term_taxonomy_id;
-		$this->links[]= array( 
+		$this->data["links"][]= array( 
 		   	"type" => "subject", # dcterms:subject
 			"subject" => $post_id,
 		 	"object" => $term_id
@@ -181,11 +180,15 @@ class JRNL_Graph {
 		if( $user->user_email ) {
 			$node["data"]["icon"] = "http://0.gravatar.com/avatar/".md5($user->user_email);
 		}
-		$this->nodes[$user_id] = $node;
+		$this->data["nodes"][$user_id] = $node;
+	}
+
+	function asData() {
+		return $this->data;
 	}
 		
 	function asJSON() {
-		return json_encode( array( "nodes"=>$this->nodes, "links"=>$this->links ) );
+		return json_encode( $this->data );
 	}
 
 	function trimLength($str, $length) {
